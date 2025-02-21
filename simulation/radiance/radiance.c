@@ -2,7 +2,7 @@
 
 #include "adcs_math/quaternion.h"
 #include <math.h>
-#define M_PI 3.1415926535897932
+#define radsim_PI 3.1415926535897932
 
 void radsim_create_earth(vec3 pos, int32_t resolution, struct radsim_planet *earth) {
     earth->pos_m = pos;
@@ -45,7 +45,7 @@ void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsi
     *Fin = 0;
 
     vec3 vref = {.x=0,.y=1,.z=0};
-    vec3 D = planet->pos_m;
+    vec3 D = planet->pos_m; vec_scalar(-1.0, D, &D);
     vec3 Dhat; vec_norm(D, &Dhat); // axis of rotation for PH (phi)
     vec3 L; // Perpendicular to D/Dhat, axis of rotation for TH (theta)
 
@@ -57,12 +57,12 @@ void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsi
         vec_cross(Dhat, vref, &L);
     }
 
-    double dTH = M_PI / (2 * concens);
+    double dTH = radsim_PI / (2 * concens);
     for (int i = 0; i < concens; i++) {
         double THi = i * dTH; // Angle theta to this ring
 
         // Ring area (surface area of a segment of a circle revolved around its radius' axis)
-        double Ai = 2 * M_PI * planet->radius_m * planet->radius_m * 
+        double Ai = 2 * radsim_PI * planet->radius_m * planet->radius_m * 
                 (0.5 * dTH - 0.25 * (sin(2 * (THi + dTH)) - sin(2 * THi)));
 
         // Rotation from Dhat to the angle of this ring
@@ -71,7 +71,7 @@ void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsi
         quat_from(THi + 0.5 * dTH, L, &qTH);
 
         int radials = i == 0 ? 1 : init_radials + i; // Radial segments
-        double dPHi = (2 * M_PI) / radials;
+        double dPHi = (2 * radsim_PI) / radials;
         for (int j = 0; j < radials; j++) {
             double PHij = j * dPHi; // Angle phi to this segment
 
@@ -94,7 +94,7 @@ void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsi
             double Pout = planet->k_albedo * Fsurf * Bij; // W/m^2 * m^2 = W
 
             vec3 emit_pos_planetspace; vec_scalar(planet->radius_m, nehat, &emit_pos_planetspace);
-            vec3 emit_pos; vec_add(D, emit_pos_planetspace, &emit_pos);
+            vec3 emit_pos; vec_add(planet->pos_m, emit_pos_planetspace, &emit_pos);
             double emit_dist = vec_mag(emit_pos);
 
             vec3 dir_to_emitter; vec_norm(emit_pos, &dir_to_emitter);
