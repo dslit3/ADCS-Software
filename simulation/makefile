@@ -20,5 +20,8 @@ run:
 clean:
 	rm -f $(TARGET)
 
+plot:
+	gnuplot simplots.gp
+
 
 .PHONY: all clean

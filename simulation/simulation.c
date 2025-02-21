@@ -3,17 +3,16 @@
 
 #include "radiance/radiance.h"
 
-void test_radiance() {
-    printf("Radiance.....");
+void test_radiance_angles() {
+    printf("radiance_angles.....");
 
-    FILE *csv = fopen("SIMOUT_radiance.csv", "w");
-    fprintf(csv, "Sun Angle (deg),Earth-Facing Radiation (W/m^2),Space-Facing Radiation (W/m^2)\n");
+    FILE *datafile = fopen("data/radiance_angles.txt", "w");
 
-    vec3 earth_pos = {.x=0.0,.y=0.0,.z=8378137.0}; // 2000 km above Earth surface
-    vec3 moon_pos = {.x=221933443.5,.y=221933443.5,.z=221933443.5}; // Uneclipsed, at an appropriate distance away
+    vec3 earth_pos = {.x=0.0,.y=0.0,.z=8378138.00}; // ~2000 km above Earth surface
+    vec3 moon_pos = {.x=-221933443.5,.y=221933443.5,.z=221933443.5}; // Uneclipsed, at an appropriate distance away
 
     struct radsim_planet planets[2]; 
-    radsim_create_earth(earth_pos, 85, &planets[0]);
+    radsim_create_earth(earth_pos, 50, &planets[0]);
     radsim_create_moon(moon_pos, 25, &planets[1]);
 
     struct radsim_state state;
@@ -25,7 +24,7 @@ void test_radiance() {
     vec3 surf_earth_facing = {.x=0.0,.y=0.0,.z=1.0};
     vec3 surf_space_facing = {.x=0.0,.y=0.0,.z=-1.0};
     
-    for (int i = 0; i < 180; i++) {
+    for (int i = 0; i <= 180; i++) {
         double angle = (i / 180.0) * 3.14159265358;
         state.dir_to_sun.x = cos(angle);
         state.dir_to_sun.z = -sin(angle);
@@ -36,18 +35,18 @@ void test_radiance() {
         radsim_receive_emission(&state, surf_earth_facing, &Fearthfacing);
         radsim_receive_emission(&state, surf_space_facing, &Fspacefacing);
 
-        fprintf(csv, "%d,%f,%f\n", i, Fearthfacing, Fspacefacing);
+        fprintf(datafile, "%d %f %f\n", i, Fearthfacing, Fspacefacing);
     }
 
-    fclose(csv);
+    fclose(datafile);
 
-    printf("complete\n");
+    printf("OK\n");
 }
 
 int main() {
     printf("Running ADCS Simulations/Calculators.\n");
 
-    test_radiance();
+    test_radiance_angles();
     
     printf("Done!\n");
     return 0;
