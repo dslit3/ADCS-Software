@@ -20,7 +20,7 @@ void radsim_create_moon(vec3 pos, int32_t resolution, struct radsim_planet *moon
 
 void radsim_receive_sun_emission(vec3 shat, double Fsun, vec3 nhat, double *Fin) {
     *Fin = Fsun * vec_dot(shat, nhat); // [1], pp. 2
-    if (*Fin < 0) *Fin = 0;
+    if (*Fin <= 0.0) *Fin = 0.0;
 }
 
 /*
@@ -39,10 +39,10 @@ void radsim_receive_sun_emission(vec3 shat, double Fsun, vec3 nhat, double *Fin)
     ring_area: The area of ring i.
     dAe: The area of segment j of ring i. This area emits the radiation received by the sun.
 */
-void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsim_planet *planet, vec3 nhat, double *Fin) {
+void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsim_planet *planet, vec3 nhat, double *OMalb) {
     const int concens = planet->resolution; // Concentric segments
     const int init_radials = 5;
-    *Fin = 0;
+    *OMalb = 0;
 
     vec3 vref = {.x=0,.y=1,.z=0};
     vec3 D = planet->pos_m; vec_scalar(-1.0, D, &D);
@@ -91,13 +91,11 @@ void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsi
             quat_rotate_vec(Dhat, qTH, &nehat);
             quat_rotate_vec(nehat, qPH, &nehat);
 
-            double Fout; // W/m2
-            radsim_receive_sun_emission(shat, Fsun, nehat, &Fout);
+            double Fin; // W/m2
+            radsim_receive_sun_emission(shat, Fsun, nehat, &Fin);
 
-            if (Fout <= 0.0) continue; // Area is not lit
-
-            // Total energy in sunlit area dAe, taking albedo into account: [1], pp. 3
-            double Eout = planet->k_albedo * Fout * dAe; // W/m^2 * m^2 = W
+            if (Fin <= 0.0) continue; // Area is not lit
+            double Fout = planet->k_albedo * Fin;
 
             vec3 emit_pos_planetspace; vec_scalar(planet->radius_m, nehat, &emit_pos_planetspace);
             vec3 emit_pos; vec_add(planet->pos_m, emit_pos_planetspace, &emit_pos);
@@ -105,11 +103,12 @@ void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsi
 
             vec3 dir_to_emitter; vec_norm(emit_pos, &dir_to_emitter);
             double receive_cosine = vec_dot(dir_to_emitter, nhat);
+            if (receive_cosine <= 0.0) continue;
 
-            if (receive_cosine < 0) receive_cosine = 0;
-
-            // Inverse square law, cosine law, energy radiated over hemisphere: [1], pp. 3
-            *Fin += Eout * receive_cosine / (radsim_PI * emit_dist * emit_dist);
+             // [1], pp. 3
+            double dA = dAe * cos(THi + dTH) / (emit_dist * emit_dist);
+            double dOMalb = Fout * receive_cosine * dA / radsim_PI;
+            if (dOMalb >= 0) *OMalb += dOMalb;
         }
     }
 }
