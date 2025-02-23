@@ -105,8 +105,12 @@ void radsim_receive_planet_diffuse_emission(vec3 shat, double Fsun, struct radsi
             double receive_cosine = vec_dot(dir_to_emitter, nhat);
             if (receive_cosine <= 0.0) continue;
 
+            vec3 dir_from_emitter; vec_scalar(-1.0, emit_pos, &dir_from_emitter); vec_norm(dir_from_emitter, &dir_from_emitter);
+            double emit_cosine = vec_dot(nehat, dir_from_emitter);
+            if (emit_cosine <= 0.0) continue;
+
              // [1], pp. 3
-            double dA = dAe * cos(THi + dTH) / (emit_dist * emit_dist);
+            double dA = dAe * emit_cosine / (emit_dist * emit_dist);
             double dOMalb = Fout * receive_cosine * dA / radsim_PI;
             if (dOMalb >= 0) *OMalb += dOMalb;
         }

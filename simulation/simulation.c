@@ -66,7 +66,7 @@ void test_radiance_distance() {
     vec3 surf = {.x=0.0,.y=0.0,.z=1.0};
     
     for (int i = 0; i <= 350; i++) {
-        double dist = 1.0 + i * 0.5;
+        double dist = 200000.0 + i * 50.0;
         double Fin = 0.0;
 
         state.planets[0].pos_m.z = 6378137.0 + dist;
@@ -80,11 +80,50 @@ void test_radiance_distance() {
     printf("OK\n");
 }
 
+void test_radiance_moonglow() {
+    printf("radiance_moonglow.....");
+
+    FILE *datafile = fopen("data/radiance_moonglow.txt", "w");
+
+    vec3 earth_pos = {.x=0.0,.y=0.0,.z=6378137.0}; // Earth surface touching spacecraft
+    vec3 moon_pos = {.y=0.0}; // Uneclipsed, at an appropriate distance away
+
+    struct radsim_planet planets[2]; 
+    radsim_create_earth(earth_pos, 50, &planets[0]);
+    radsim_create_moon(moon_pos, 25, &planets[1]);
+
+    struct radsim_state state;
+    state.dir_to_sun.x = 0.0;
+    state.dir_to_sun.y = 0.0;
+    state.dir_to_sun.z = 1.0;
+    state.in_eclipse = true;
+    state.planets = planets;
+    state.planets_count = 2;
+
+    vec3 surf = {.x=0.0,.y=0.0,.z=-1.0};
+    
+    for (int i = 0; i <= 180; i++) {
+        double angle = (i / 180.0) * 3.14159265358;
+        double Fin = 0.0;
+
+        state.planets[1].pos_m.x = 384400000.0 * cos(angle);
+        state.planets[1].pos_m.z = 384400000.0 * -sin(angle);
+        radsim_receive_emission(&state, surf, &Fin);
+
+        fprintf(datafile, "%d %f\n", i, Fin);
+    }
+
+    fclose(datafile);
+
+    printf("OK\n");
+}
+
 int main() {
     printf("Running ADCS Simulations/Calculators.\n");
 
     test_radiance_angles();
     test_radiance_distance();
+    test_radiance_moonglow();
     
     printf("Done!\n");
     return 0;
